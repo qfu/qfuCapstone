@@ -1,13 +1,11 @@
-
-import sys
-from pyspark import SparkConf,SparkContext
-from nltk.tokenize import RegexpTokenizer
-from itertools import chain
 import json
 import re
-from nltk.tokenize import word_tokenize
+import os
 
+from pyspark import SparkConf, SparkContext
+from nltk.tokenize import RegexpTokenizer
 
+os.environ["SPARK_HOME"] = "/Users/qfu/Desktop/Software/Spark/spark-1.6.2-bin-hadoop2.6"
 
 tokenizer = RegexpTokenizer(r'\w+')
 #tokenizer = RegexpTokenizer('[A-Z]\w+')
@@ -236,7 +234,7 @@ def frequentMine(Filepath, iteration = 10, minimumSupport = 6, tweets = False, p
     if perTweet: print document
 
 def main():
-    frequentMine(Filepath ="./tweets_smaller.txt", iteration = 8, minimumSupport = 2, tweets =True,perTweet=False,verbose=False)
+    frequentMine(Filepath ="./Data/tweets_smaller.txt", iteration = 8, minimumSupport = 2, tweets =True,perTweet=False,verbose=False)
 
 
 if __name__ == "__main__": main()
