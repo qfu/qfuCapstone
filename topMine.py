@@ -5,7 +5,11 @@ import os
 from pyspark import SparkConf, SparkContext
 from nltk.tokenize import RegexpTokenizer
 
-os.environ["SPARK_HOME"] = "/Users/qfu/Desktop/Software/Spark/spark-1.6.2-bin-hadoop2.6"
+# os.environ["SPARK_HOME"] = "/Users/qfu/Desktop/Software/Spark/spark-1.6.2-bin-hadoop2.6"
+
+# Setting up the standalone mode
+# conf = SparkConf().setMaster("local[4]").setAppName("TopMiner")
+# sc = SparkContext(conf=conf)
 
 tokenizer = RegexpTokenizer(r'\w+')
 #tokenizer = RegexpTokenizer('[A-Z]\w+')
@@ -65,7 +69,7 @@ class Utility:
             if(subindex + n - 2 >= len(input)):
                 continue;
 
-            string = " ".join([ input[i] for i in range(subindex, subindex + n - 1)]);
+            string = " ".join([ input[i] for i in range(subindex, subindex + n - 1)])
             if frequecy.has_key(string) and frequecy.get(string) >= minFrequency:
                 output.append(subindex) #append index
         return {index:output}
@@ -89,8 +93,8 @@ class Utility:
         for subindex in list:
             if(subindex + n - 1 >= len(input)): continue;
             # x to x+n-1
-            string = " ".join([input[i] for i in range(subindex,subindex + n)]);
-            dict[string] = dict.setdefault(string,0) + 1;
+            string = " ".join([input[i] for i in range(subindex,subindex + n)])
+            dict[string] = dict.setdefault(string,0) + 1
 
         return dict
 
@@ -115,18 +119,18 @@ class Utility:
         tpp = TweetPreProcess()
         if (tweet.get('text') != None and tweet.get('lang') != None and tweet.get('lang') == 'en'):
             #formatStr = " ".join(tpp.preprocess(tweet.get('text'),True)) + ".";
-            formatStr = " ".join(tokenizer.tokenize(tweet.get('text'))) + ".";
-        return formatStr;
+            formatStr = " ".join(tokenizer.tokenize(tweet.get('text'))) + "."
+        return formatStr
     @staticmethod
 
     def getPerTweet(input, index, gram,findDict):
-        original = input;
+        original = input
         input = input.split(' ')
         output = {}
-        output.setdefault(original, []);
+        output.setdefault(original, [])
         for idx in findDict[index]:
             output[original].append(" ".join([input[i] for i in range(idx,idx + gram)]))
-        return output;
+        return output
 
     @staticmethod
     def mergeDocument(dict1, dict2):
@@ -136,19 +140,17 @@ class Utility:
 
 
         for (k,v) in dict2.iteritems():
-            mergeDict.setdefault(k,[]).append(dict2.get(k));
+            mergeDict.setdefault(k,[]).append(dict2.get(k))
 
         return mergeDict
 
 
 
 # Driver Program
-def frequentMine(Filepath, iteration = 10, minimumSupport = 6, tweets = False, perTweet = False, verbose = False):
+def frequentMine(sc,Filepath, iteration = 10, minimumSupport = 6, tweets = False, perTweet = False, verbose = False):
 
-    minFrequency = minimumSupport;
-    #Setting up the standalone mode
-    conf = SparkConf().setMaster("local").setAppName("LogisticClassifer")
-    sc = SparkContext(conf = conf)
+    minFrequency = minimumSupport
+
 
     # Load in RDD and RDD persist for multiple operation
     lines = sc.textFile(Filepath)
@@ -167,6 +169,7 @@ def frequentMine(Filepath, iteration = 10, minimumSupport = 6, tweets = False, p
     frequecy = {}
     result = {}
     document = {}
+
     # Main Logic of Phase Mining
     # i is the i-grams, default to 8
     for i in range(1,iteration):
@@ -176,7 +179,7 @@ def frequentMine(Filepath, iteration = 10, minimumSupport = 6, tweets = False, p
             .map( lambda (x,y): Utility.ngrams(x,y,i,phasefrequency,frequecy,minFrequency))
         if verbose:
             print "Debugging ....."
-            print nGram.collect();
+            print nGram.collect()
 
         #Merge all possible #document -> index of ngram
         findDict = nGram \
@@ -192,7 +195,7 @@ def frequentMine(Filepath, iteration = 10, minimumSupport = 6, tweets = False, p
                 doc_val = doc \
                     .reduce( lambda x,y : Utility.mergeDict(x,y))
             document = Utility.mergeDocument(document, doc_val)
-            #print "document value is ", doc_val;
+            print "document value is ", document
 
         #Pruning
         idxSentence = idxSentence \
@@ -204,7 +207,8 @@ def frequentMine(Filepath, iteration = 10, minimumSupport = 6, tweets = False, p
             print "The gram", i
             print "idxSentence",idxSentence.collect()
             print "The findDict",findDict
-        #Second Map reduce job to Count frequecy
+
+        #Second Map reduce job to Count frequency
         frequencyDict = idxSentence \
             .map(lambda (x,y) : Utility.countPhase(x,y,findDict,i));
         #Check Empty
@@ -214,27 +218,23 @@ def frequentMine(Filepath, iteration = 10, minimumSupport = 6, tweets = False, p
         MergeFrequency = frequencyDict \
             .reduce(lambda x,y : Utility.mergeFrequency(x,y))
 
-        filterMergeFrequency = MergeFrequency;
+        filterMergeFrequency = MergeFrequency
 
         #Parallize the result out
         ls = sc.parallelize(filterMergeFrequency.items()) \
             .filter(lambda (x,y) : y >= minFrequency and len(x) > 0) \
-                .collect();
-        result.update(ls);
+                .collect()
+        result.update(ls)
 
         if verbose:
-            print "The merged frequency", MergeFrequency;
+            print "The merged frequency", MergeFrequency
             print "\n\n"
         #Another iteration
         frequecy = MergeFrequency
         phasefrequency = findDict
 
-    #Last process
-    print result
-    if perTweet: print document
-
-def main():
-    frequentMine(Filepath ="./Data/tweets_smaller.txt", iteration = 8, minimumSupport = 2, tweets =True,perTweet=False,verbose=False)
-
-
-if __name__ == "__main__": main()
+    #return Last process
+    if perTweet:
+        return document
+    else:
+        return result
