@@ -12,6 +12,6 @@ def fpGrowth(input,support,sc):
     rdd = sc.parallelize(input).map(lambda key : list(set(key.split(" "))))
     #print rdd.collect()
     model = FPGrowth.train(rdd, minSupport=support, numPartitions=10)
-    frequentItems = sorted(model.freqItemsets().collect())
+    #frequentItems = sorted(model.freqItemsets().collect())
     #return rdd.collect()
-    return frequentItems
+    return model.freqItemsets()

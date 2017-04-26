@@ -7,6 +7,27 @@ os.environ["SPARK_HOME"] = "/Users/qfu/Desktop/Software/Spark/spark-1.6.2-bin-ha
 
 from pyspark import SparkConf, SparkContext
 
+class Utility:
+    @staticmethod
+    def calFrequency(item,freq,filename):
+        dir = {}
+        ss = " ".join(x.encode('utf-8') for x in item)
+        dir.setdefault(ss, []).append((int(path.splitext(filename)[0]), freq))
+        return dir
+
+    @staticmethod
+    def mergeFrequency(dict1, dict2):
+        mergeDict = {}
+        for (k,v) in dict1.iteritems():
+            mergeDict[k] = dict1.get(k)
+
+
+        for (k,v) in dict2.iteritems():
+            mergeDict[k] = mergeDict.setdefault(k,[]) + dict2.get(k)
+
+        return mergeDict
+
+
 def main():
     # Setting up the standalone mode
     conf = SparkConf().setMaster("local[4]").setAppName("TopMiner")
@@ -14,53 +35,36 @@ def main():
 
 
     mypath = "./Data/Date/"
+
+    files = []
     dir = {}
-    x = []
-    text = []
-    y = []
+
+    
     for (dirpath, dirnames, filenames) in walk(mypath):
-        for filename in filenames:
-            key = frequentMine(sc, Filepath=mypath + filename, iteration=7, minimumSupport=2, tweets=True, \
+        files = filenames
+        break
+
+    for filename in files:
+
+        key = frequentMine(sc, Filepath= mypath + filename, iteration=7, minimumSupport=3, tweets=True, \
                                perTweet=False, verbose=False).keys()
-
-            res = fpGrowth(key,0.01,sc)
-
-            for item,freq in res:
-                #print item
-                ss = " ".join(x.encode('utf-8') for x in item)
-                dir.setdefault(ss,[]).append((int(path.splitext(filename)[0]),freq))
-                """
-                text.append(ss)
-                x.append(freq)
-                y.append(int(path.splitext(filename)[0]))
-                """
-        break
-    for key, value in dir.iteritems():
-        print key,value
-
-    """"
-    dir = ""
-    fileList = []
-
-    This part is treated each day as one transaction
-    for (dirpath, dirnames, filenames) in os.walk(transaction_path):
-        fileList = filenames
-        dir = dirpath
-        break
-
-    fpInput = []
-    for file in fileList:
-        file_path = dir + file
-        #TopMine
-        key = frequentMine(sc,Filepath=file_path, iteration=5, minimumSupport = 3, tweets=True, \
-                     perTweet=False, verbose=False).keys()
         print key
 
-        fpInput.append(key)
-    res = fpGrowth(fpInput,0.6,sc)
-    print res
-    """
+        res = fpGrowth(key,0.01,sc)
 
+        res_dir = res.map(lambda (item,freq) : Utility.calFrequency(item,freq,filename)) \
+            .reduce(lambda x,y : Utility.mergeFrequency(x,y))
+        dir = Utility.mergeFrequency(res_dir,dir)
+    print dir
+
+    for key, value in dir.iteritems():
+        x,text,y =[],[],[]
+        for pair in value:
+            x.append(pair[0])
+            y.append(pair[1])
+            text.append(key)
+        print x,y,text
+        visualize(x,y,text)
 
 
 

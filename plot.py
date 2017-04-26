@@ -8,7 +8,7 @@ def visualize(t,s,text):
         plt.annotate(text[i], xy=(t[i], s[i]), xytext=(t[i], s[i]+0.25))
 
     plt.ylim(0,50)
-    #plt.xlim(0,150)
+    #plt.xlim(201511,201530)
     plt.show()
 
 

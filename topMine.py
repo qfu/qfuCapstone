@@ -1,6 +1,7 @@
 import json
 import re
 import os
+from nltk.corpus import stopwords
 
 from pyspark import SparkConf, SparkContext
 from nltk.tokenize import RegexpTokenizer
@@ -35,17 +36,26 @@ class TweetPreProcess:
             r'(?:\S)' # anything else
         ]
 
+        self.exclude_str = [
+            self.emoticons_str,
+            r'<[^>]+>', # HTML tags
+            r'(?:@[\w_]+)', # @-mentions
+            r"(?:\#+[\w_]+[\w\'_\-]*[\w_]+)", # hash-tags
+            r'http[s]?://(?:[a-z]|[0-9]|[$-_@.&amp;+]|[!*\(\),]|(?:%[0-9a-f][0-9a-f]))+', # URLs
+
+        ]
+        self.exclude_re = re.compile(r'(' + '|'.join(self.exclude_str) + ')', re.VERBOSE | re.IGNORECASE)
         self.tokens_re = re.compile(r'('+'|'.join(self.regex_str)+')', re.VERBOSE | re.IGNORECASE)
         self.emoticon_re = re.compile(r'^'+self.emoticons_str+'$', re.VERBOSE | re.IGNORECASE)
 
 
     def tokenize(self,s):
-        return self.tokens_re.findall(s)
+        return self.exclude_re.findall(s)
 
     def preprocess(self,s, lowercase=False):
-        tokens = self.tokenize(s)
+        exclude_tokens = self.tokenize(s)
         if lowercase:
-            tokens = [token if self.emoticon_re.search(token) else token.lower() for token in tokens]
+            tokens = [token for token in tokenizer.tokenize(s) if token not in exclude_tokens and token not in stopwords.words('english')]
         return tokens
 
 
@@ -113,13 +123,14 @@ class Utility:
     @staticmethod
     def loadJson(line):
         formatStr = ""
+
         tweet = json.loads(line).get('tweet')
         if(tweet == None):
             return formatStr;
         tpp = TweetPreProcess()
         if (tweet.get('text') != None and tweet.get('lang') != None and tweet.get('lang') == 'en'):
-            #formatStr = " ".join(tpp.preprocess(tweet.get('text'),True)) + ".";
-            formatStr = " ".join(tokenizer.tokenize(tweet.get('text'))) + "."
+            formatStr = " ".join(tpp.preprocess(tweet.get('text'),True)) + ".";
+            #formatStr = " ".join(tokenizer.tokenize(tweet.get('text'))) + "."
         return formatStr
     @staticmethod
 
