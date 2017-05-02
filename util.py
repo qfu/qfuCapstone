@@ -51,7 +51,7 @@ class Utility:
         return date_s
 
 def files():
-    inputPath = "./Data/tweets_medium.txt"
+    inputPath = "./Data/tweets.txt"
     conf = SparkConf().setMaster("local[4]").setAppName("Utility")
     sc = SparkContext(conf=conf)
     
