@@ -124,13 +124,14 @@ class Utility:
     def loadJson(line):
         formatStr = ""
 
-        tweet = json.loads(line).get('tweet')
+        tweet = json.loads(line)
         if(tweet == None):
-            return formatStr;
+            return formatStr + "\n"
         tpp = TweetPreProcess()
         if (tweet.get('text') != None and tweet.get('lang') != None and tweet.get('lang') == 'en'):
-            formatStr = " ".join(tpp.preprocess(tweet.get('text'),True)) + ".";
+            formatStr = " ".join(tpp.preprocess(tweet.get('text'),True)) + "\n";
             #formatStr = " ".join(tokenizer.tokenize(tweet.get('text'))) + "."
+        #print formatStr
         return formatStr
     @staticmethod
 
@@ -170,10 +171,10 @@ def frequentMine(sc,Filepath, iteration = 10, minimumSupport = 6, tweets = False
         lines = lines.flatMap(lambda x : x.split('\n')) \
             .map(lambda line : Utility.loadJson(line))
 
-
     #Serires of operations # Get rid of len 0 line 	#get zipWithIndex
-    idxSentence = lines.flatMap(lambda line : line.split(".")) \
-                        .filter(lambda line : len(line) > 0 ).zipWithIndex().persist()
+    idxSentence = lines.flatMap(lambda line : line.split("\n")) \
+                        .filter(lambda line : len(line) > 0 )\
+                        .zipWithIndex().persist()
 
     #Set up datastructure
     phasefrequency = {}
@@ -221,7 +222,7 @@ def frequentMine(sc,Filepath, iteration = 10, minimumSupport = 6, tweets = False
 
         #Second Map reduce job to Count frequency
         frequencyDict = idxSentence \
-            .map(lambda (x,y) : Utility.countPhase(x,y,findDict,i));
+            .map(lambda (x,y) : Utility.countPhase(x,y,findDict,i))
         #Check Empty
         if frequencyDict.isEmpty():
             break
